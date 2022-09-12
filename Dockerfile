@@ -1,13 +1,12 @@
 FROM arm32v7/debian:bullseye AS build
 
 # Install needed dependencies.
-RUN    sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list \
-    && apt update
-RUN    DEBIAN_FRONTEND=noninteractive apt install -y \
-       git autoconf automake gcc make \
-       pkg-config  python3-pip python3-setuptools patch linux-headers-armmp \
-       tzdata e2fslibs-dev libblkid-dev zlib1g-dev liblzo2-dev \
-       python3-dev libzstd-dev wget linux-libc-dev
+RUN    apt update \
+    && DEBIAN_FRONTEND=noninteractive \
+    && apt install -y \
+       git autoconf automake gcc make pkg-config patch \
+       e2fslibs-dev libblkid-dev zlib1g-dev liblzo2-dev \
+       libzstd-dev linux-libc-dev linux-headers-armmp
 
 # btrfs-progs build
 RUN    git clone --depth 1 https://github.com/Lakshmipathi/dduper.git \
@@ -27,8 +26,7 @@ FROM arm32v7/debian:bullseye
 
 # Install needed dependencies.
 COPY   --from=build /dduper/requirements.txt requirements.txt 
-RUN    sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list \
-    && apt update \
+RUN    apt update \
     && DEBIAN_FRONTEND=noninteractive apt install -y \
        python3 python3-pip python3-setuptools \
     && pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
