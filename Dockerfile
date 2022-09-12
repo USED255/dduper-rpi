@@ -6,7 +6,8 @@ RUN    apt update \
     && apt install -y \
        git autoconf automake gcc make pkg-config patch \
        e2fslibs-dev libblkid-dev zlib1g-dev liblzo2-dev \
-       libzstd-dev linux-libc-dev linux-headers-armmp
+       libzstd-dev linux-libc-dev linux-headers-armmp \
+       python3-dev
 
 # btrfs-progs build
 RUN    git clone --depth 1 https://github.com/Lakshmipathi/dduper.git \
