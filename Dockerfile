@@ -2,8 +2,8 @@ FROM arm32v7/debian:bullseye AS build
 
 # Install needed dependencies.
 RUN    sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list \
-    && apt-get update
-RUN    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    && apt update
+RUN    DEBIAN_FRONTEND=noninteractive apt install -y \
        git autoconf automake gcc make \
        pkg-config  python3-pip python3-setuptools patch linux-headers-armmp \
        tzdata e2fslibs-dev libblkid-dev zlib1g-dev liblzo2-dev \
@@ -26,15 +26,17 @@ RUN    patch -p1 < /dduper/patch/btrfs-progs-v5.12.1/0001-Print-csum-for-a-given
 FROM arm32v7/debian:bullseye
 
 # Install needed dependencies.
+COPY   --from=build /dduper/requirements.txt requirements.txt 
 RUN    sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list \
-    && apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-       python3-pip python3-setuptools \
+    && apt update \
+    && DEBIAN_FRONTEND=noninteractive apt install -y \
+       python3 python3-pip python3-setuptools \
+    && pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+    && pip3 install --no-cache-dir -r requirements.txt \
+    && apt purge python3-pip python3-setuptools \
+    && apt autoremove \
     && apt clean \
     && rm -rv /var/lib/apt/lists
-COPY   --from=build /dduper/requirements.txt requirements.txt 
-RUN    pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    && pip3 install --no-cache-dir -r requirements.txt
 
 CMD ["/usr/sbin/dduper"]
 
