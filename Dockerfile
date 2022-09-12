@@ -1,3 +1,5 @@
+# 20220912
+# docker buildx build --platform linux/arm/v7 -t dduper-rpi .
 FROM arm32v7/debian:bullseye AS build
 
 # Install needed dependencies.
