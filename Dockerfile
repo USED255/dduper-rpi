@@ -22,21 +22,13 @@ RUN    patch -p1 < /dduper/patch/btrfs-progs-v5.12.1/0001-Print-csum-for-a-given
     && cp btrfs.static /btrfs-progs-build
 
 
-FROM arm32v7/debian:bullseye
-
-# Install needed dependencies.
-COPY   --from=build /dduper/requirements.txt requirements.txt 
-RUN    apt update \
-    && DEBIAN_FRONTEND=noninteractive apt install -y \
-       python3 python3-pip python3-setuptools \
-    && pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    && pip3 install --no-cache-dir -r requirements.txt \
-    && apt purge python3-pip python3-setuptools \
-    && apt autoremove \
-    && apt clean \
-    && rm -rv /var/lib/apt/lists
+FROM python:3.9-bullseye
 
 CMD ["/usr/sbin/dduper"]
+
+# Install needed dependencies.
+COPY --from=build /dduper/requirements.txt requirements.txt 
+RUN  pip3 install --no-cache-dir -r requirements.txt
 
 # Install dduper
 COPY --from=build /lib/arm-linux-gnueabihf/liblzo2.so.2 /lib/arm-linux-gnueabihf/
