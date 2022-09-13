@@ -26,7 +26,7 @@ RUN    patch -p1 < /dduper/patch/btrfs-progs-v5.12.1/0001-Print-csum-for-a-given
 
 FROM arm32v7/debian:bullseye
 
-CMD ["/usr/sbin/dduper"]
+ENTRYPOINT ["/usr/sbin/dduper"]
 
 # Install needed dependencies.
 COPY   --from=build /dduper/requirements.txt requirements.txt 
