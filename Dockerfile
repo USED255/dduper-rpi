@@ -1,13 +1,14 @@
+# docker buildx build --platform linux/arm/v7 -t used255/dduper-rpi:20220913 .
 FROM arm32v7/debian:bullseye AS build
 
 # Install needed dependencies.
-RUN    sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list \
-    && apt-get update
-RUN    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-       git autoconf automake gcc make \
-       pkg-config  python3-pip python3-setuptools patch linux-headers-armmp \
-       tzdata e2fslibs-dev libblkid-dev zlib1g-dev liblzo2-dev \
-       python3-dev libzstd-dev wget linux-libc-dev
+RUN    apt update \
+    && DEBIAN_FRONTEND=noninteractive \
+    && apt install -y \
+       git autoconf automake gcc make pkg-config patch \
+       e2fslibs-dev libblkid-dev zlib1g-dev liblzo2-dev \
+       libzstd-dev linux-libc-dev linux-headers-armmp \
+       python3-dev python3-pip
 
 # btrfs-progs build
 RUN    git clone --depth 1 https://github.com/Lakshmipathi/dduper.git \
@@ -23,20 +24,13 @@ RUN    patch -p1 < /dduper/patch/btrfs-progs-v5.12.1/0001-Print-csum-for-a-given
     && cp btrfs.static /btrfs-progs-build
 
 
-FROM arm32v7/debian:bullseye
-
-# Install needed dependencies.
-RUN    sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list \
-    && apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-       python3-pip python3-setuptools \
-    && apt clean \
-    && rm -rv /var/lib/apt/lists
-COPY   --from=build /dduper/requirements.txt requirements.txt 
-RUN    pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    && pip3 install --no-cache-dir -r requirements.txt
+FROM python:3.9-bullseye
 
 CMD ["/usr/sbin/dduper"]
+
+# Install needed dependencies.
+COPY --from=build /dduper/requirements.txt requirements.txt 
+RUN  pip3 install --no-cache-dir -r requirements.txt
 
 # Install dduper
 COPY --from=build /lib/arm-linux-gnueabihf/liblzo2.so.2 /lib/arm-linux-gnueabihf/
