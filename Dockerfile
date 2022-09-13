@@ -1,4 +1,4 @@
-FROM arm32v7/debian:bullseye AS build
+FROM debian:bullseye AS build
 
 # Install needed dependencies.
 RUN    apt update \
@@ -23,7 +23,7 @@ RUN    patch -p1 < /dduper/patch/btrfs-progs-v5.12.1/0001-Print-csum-for-a-given
     && cp btrfs.static /btrfs-progs-build
 
 
-FROM arm32v7/debian:bullseye
+FROM debian:bullseye
 
 ENTRYPOINT ["/usr/sbin/dduper"]
 
