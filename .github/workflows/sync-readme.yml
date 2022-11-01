@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Sync README
-        uses: meeDamian/sync-readme@v1.0.6
+        uses: meeDamian/sync-readme@v1
         with:
           pass: ${{ secrets.DOCKER_PASS }}
           description: https://github.com/USED255/dduper-rpi
