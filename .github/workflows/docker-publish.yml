@@ -6,8 +6,19 @@ name: Publish Container
 # documentation.
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ "master" ]
+    branches:
+      - master
+    paths:
+      - "Dockerfile"
+      - ".github/workflows/docker-publish.yml"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "Dockerfile"
+      - ".github/workflows/docker-publish.yml"
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -26,66 +37,74 @@ jobs:
       id-token: write
 
     steps:
-      - name: downcase IMAGE_NAME
-        run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      # Install the cosign tool except on PR
-      # https://github.com/sigstore/cosign-installer
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@7e0881f8fe90b25e305bbf0309761e9314607e25
-        with:
-          cosign-release: 'v1.9.0'
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-
-      # Workaround: https://github.com/docker/build-push-action/issues/461
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
-
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+        uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: downcase IMAGE_NAME
+        run: echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        uses: docker/metadata-action@v4
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      # Workaround: https://github.com/docker/build-push-action/issues/461
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        uses: docker/build-push-action@v3
         with:
-          context: .
           platforms: linux/arm/v7
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            docker.io/${{ env.IMAGE_NAME }}:latest
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  Sign:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@f3c664df7af409cb4873aa5068053ba9d61a57b6 #v2.6.0
+        with:
+          cosign-release: "v1.11.0"
 
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
-      # repository is public to avoid leaking data. If you would like to publish
+      # repository is public to avoid leaking data.  If you would like to publish
       # transparency data even for private images, pass --force to cosign below.
       # https://github.com/sigstore/cosign
       - name: Sign the published Docker image
@@ -94,16 +113,4 @@ jobs:
           COSIGN_EXPERIMENTAL: "true"
         # This step uses the identity token to provision an ephemeral certificate
         # against the sigstore community Fulcio instance.
-        run: cosign sign ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build-and-push.outputs.digest }}
-
-      - name: Push Image to multiple registries
-        uses: akhilerm/tag-push-action@v2.0.0
-        with:
-          src: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:master
-          dst: docker.io/${{ env.IMAGE_NAME }}:master
-
-      - name: Sync README
-        uses: meeDamian/sync-readme@v1.0.6
-        with:
-          pass: ${{ secrets.DOCKER_PASS }}
-          description: https://github.com/USED255/dduper-rpi
+        run: echo "${{ steps.meta.outputs.tags }}" | xargs -I {} cosign sign {}@${{ steps.build-and-push.outputs.digest }}
