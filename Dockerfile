@@ -33,9 +33,9 @@ RUN    apt update \
     && DEBIAN_FRONTEND=noninteractive \
     && apt install -y \
        python3-numpy python3-ptable \
-       python3-pip \
-    && pip3 install --no-cache-dir pysqlite3-binary \
-    && apt purge -y python3-pip \
+       python3-pip libsqlite3-dev \
+    && pip3 install --no-cache-dir pysqlite3 \
+    && apt purge -y python3-pip libsqlite3-dev \
     && apt autoremove -y \
     && apt clean \
     && rm -rv /var/lib/apt/lists
