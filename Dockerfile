@@ -34,7 +34,7 @@ RUN    apt update \
     && apt install -y \
        python3-numpy python3-ptable \
        python3-pip \
-    && pip3 install --no-cache-dir pysqlite3 \
+    && pip3 install --no-cache-dir pysqlite3-binary \
     && apt purge -y python3-pip \
     && apt autoremove -y \
     && apt clean \
